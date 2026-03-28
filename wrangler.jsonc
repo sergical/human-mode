@@ -1,0 +1,36 @@
+/**
+ * Human Mode
+ * A Cloudflare Worker that turns hard public webpages into calmer,
+ * plain-language guidance and optional ElevenLabs voice briefings.
+ */
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "human-mode",
+  "compatibility_date": "2026-03-28",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "./workers/app.ts",
+  "migrations": [
+    {
+      "new_sqlite_classes": ["HumanModeSession"],
+      "tag": "v1"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "HumanModeSession",
+        "name": "HUMAN_MODE_SESSIONS"
+      }
+    ]
+  },
+  "browser": {
+    "binding": "BROWSER_RENDERING"
+  },
+  "ai": {
+    "binding": "AI"
+  },
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}
