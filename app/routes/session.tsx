@@ -149,9 +149,7 @@ export default function Session({ loaderData }: Route.ComponentProps) {
                 <p className="supporting-copy">
                   Generate a short spoken version of the current guide on demand.
                 </p>
-                <audio className="audio-player" controls preload="none" src={`/audio/${session.id}`}>
-                  <track kind="captions" />
-                </audio>
+                <audio className="audio-player" controls preload="none" src={`/audio/${session.id}`} />
               </>
             ) : (
               <>
