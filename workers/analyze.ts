@@ -10,7 +10,7 @@ import {
 } from "../shared/human-mode";
 import { capturePageContext } from "./browser";
 
-const DEFAULT_AI_MODEL = "@cf/meta/llama-3.1-8b-instruct";
+const DEFAULT_AI_MODEL = "@cf/meta/llama-3.3-70b-instruct-fp8-fast";
 
 export async function analyzePageForHumanMode(
   init: HumanModeSessionInit,
@@ -58,11 +58,15 @@ async function generateGuideWithWorkersAi(
 
   const systemPrompt = [
     "You are Human Mode. You turn confusing webpages into calm, plain-language guides.",
-    "Tone: patient, reassuring, specific. Reading level: simple — like explaining to a smart friend who has never seen this topic before.",
+    "Tone: patient, reassuring, specific. Reading level: simple.",
     `Output language: ${init.locale}.`,
-    "Return ONLY valid JSON with this shape (no markdown, no explanation):",
-    '{"overview":"1-2 sentences","beforeYouStart":["item1","item2"],"whatMightBeConfusing":[{"label":"short","explanation":"1 sentence"}],"nextSteps":["step1","step2"],"suggestedQuestions":["q1","q2"],"voiceScript":"2-3 spoken sentences"}',
-    "Keep each field brief. Max 3 items per array. Stay grounded in the page details. Do not invent.",
+    "",
+    "Return ONLY a JSON object. No markdown. No explanation. No ```json wrapper.",
+    "Exact shape:",
+    "",
+    '{"overview":"What this page wants, in 1-2 simple sentences","beforeYouStart":["thing to gather 1","thing to gather 2","thing to gather 3"],"whatMightBeConfusing":[{"label":"Jargon term","explanation":"What it actually means"}],"nextSteps":["First do this","Then do this","Then do this"],"suggestedQuestions":["Question 1?","Question 2?","Question 3?"],"voiceScript":"A calm 2-3 sentence spoken summary."}',
+    "",
+    "Max 3 items per array. Be specific to THIS page. Do not invent steps or fees not on the page.",
   ].join("\n");
 
   const userPrompt = [
@@ -149,7 +153,12 @@ async function generateFollowUpWithWorkersAi(
 }
 
 function parseGuideFromModel(raw: string): HumanModeGuide | null {
-  const jsonLike = extractJsonObject(raw);
+  // Strip markdown code fences that LLMs sometimes add
+  let cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```\s*$/, "");
+  // Remove trailing commas before } or ] (common LLM mistake)
+  cleaned = cleaned.replace(/,\s*([}\]])/g, "$1");
+
+  const jsonLike = extractJsonObject(cleaned);
   if (!jsonLike) {
     return null;
   }
@@ -226,18 +235,16 @@ function buildFallbackGuide(
     "Can you explain this in simpler words?",
   ]).slice(0, 4);
 
-  const overview = [
-    `This page is about ${scenario.name.toLowerCase()}.`,
-    "Here is the calm version — one step at a time.",
-    page.summary,
-  ].join(" ");
+  const overview = page.summary
+    ? `${page.summary} Here is the calm version — one step at a time.`
+    : `This page is about ${scenario.name.toLowerCase()}. Here is the calm version — one step at a time.`;
 
   const voiceScript = [
-    "Here is the calm version of this page.",
+    `Here is the calm version of ${page.title}.`,
     overview,
     `Before you start, ${beforeYouStart[0] ?? "gather the key documents this page asks for"}.`,
     `Watch out for ${whatMightBeConfusing[0]?.label.toLowerCase() ?? "official wording that hides the real choice"}.`,
-    `Your next step is: ${nextSteps[0] ?? "read the first section slowly before you click anything"}`,
+    `Your safest next step: ${nextSteps[0] ?? "read the first section slowly before clicking anything"}.`,
   ].join(" ");
 
   return {
