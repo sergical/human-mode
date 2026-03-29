@@ -87,28 +87,22 @@ export default function Session({ loaderData }: Route.ComponentProps) {
   return (
     <main className="mx-auto w-full max-w-2xl px-5 py-12">
       <article>
-        {/* Header */}
-        <header className="mb-10">
-          <Link
-            to="/"
-            className="mb-4 inline-block text-sm font-semibold text-ink-soft no-underline hover:text-ink"
-          >
-            &larr; New guide
-          </Link>
-          <h1 className="font-display text-[clamp(2rem,5vw,3.4rem)] leading-[1] tracking-tight text-ink">
-            {session.page.title}
-          </h1>
-          <p className="mt-3 text-sm text-ink-soft">
-            From {new URL(session.page.url).hostname} &middot;{" "}
-            plain language mode
-          </p>
-        </header>
+        {/* Back link */}
+        <Link
+          to="/"
+          className="mb-6 inline-block text-sm font-semibold text-ink-soft no-underline hover:text-ink"
+        >
+          &larr; New guide
+        </Link>
 
-        {/* Voice Brief */}
+        {/* Voice Brief — THE HERO */}
         {loaderData.voiceReady && (
-          <section className="mb-10 rounded-2xl border border-teal/25 bg-gradient-to-br from-teal-soft to-paper-bright p-5">
-            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-ink-soft">
-              Voice brief
+          <section className="mb-8 rounded-3xl border border-teal/25 bg-gradient-to-br from-teal/10 to-paper-bright p-6 shadow-lg shadow-teal/5">
+            <p className="mb-1 font-display text-xl text-ink">
+              Listen to the calm version
+            </p>
+            <p className="mb-4 text-sm text-ink-soft">
+              {session.page.title}
             </p>
             <AudioPlayerProvider>
               <div className="flex items-center gap-3">
@@ -126,6 +120,16 @@ export default function Session({ loaderData }: Route.ComponentProps) {
             </AudioPlayerProvider>
           </section>
         )}
+
+        {/* Page title + source */}
+        <header className="mb-8">
+          <h1 className="font-display text-[clamp(1.8rem,4vw,2.8rem)] leading-[1.05] tracking-tight text-ink">
+            {session.page.title}
+          </h1>
+          <p className="mt-2 text-sm text-ink-soft">
+            From {new URL(session.page.url).hostname}
+          </p>
+        </header>
 
         {/* Overview */}
         <p className="mb-8 text-lg/relaxed text-ink">
