@@ -57,7 +57,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const [url, setUrl] = useState("");
+  const [url, setUrl] = useState(() => {
+    if (typeof window !== "undefined") {
+      return new URLSearchParams(window.location.search).get("prefill") || "";
+    }
+    return "";
+  });
   const [locale, setLocale] = useState(() => {
     if (typeof navigator !== "undefined") {
       const lang = navigator.language?.split("-")[0];
