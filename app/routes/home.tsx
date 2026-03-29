@@ -87,31 +87,28 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       </section>
 
       {/* ---- Before / After ---- */}
-      <section className="mb-14 grid grid-cols-1 items-stretch gap-5 md:grid-cols-[1fr_auto_1fr]">
-        <div className="rounded-2xl border border-dashed border-ink/15 bg-ink/[0.04] p-6 animate-[rise_500ms_ease_both]">
-          <span className="mb-3 block text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft">
-            What the website says
+      <section className="mx-auto mb-14 max-w-3xl grid grid-cols-1 items-stretch gap-4 md:grid-cols-[1fr_auto_1fr]">
+        <div className="rounded-2xl border border-dashed border-ink/15 bg-ink/[0.04] p-5 animate-[rise_500ms_ease_both]">
+          <span className="mb-2 block text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft">
+            The website
           </span>
-          <p className="text-sm/relaxed italic text-ink-soft">
-            Submit Form I-864, Affidavit of Support Under Section 213A of the
-            INA, to establish that an intending immigrant has adequate means of
-            financial support and is not likely to become a public charge
-            pursuant to &sect;602(d)(2) of the Immigration Act of 1990.
+          <p className="text-[0.92rem]/relaxed italic text-ink-soft">
+            &ldquo;Submit Form I-864, Affidavit of Support Under Section 213A
+            of the INA, pursuant to &sect;602(d)(2)...&rdquo;
           </p>
         </div>
 
-        <div className="flex items-center justify-center text-3xl font-light text-teal max-md:rotate-90">
+        <div className="flex items-center justify-center text-2xl text-teal max-md:rotate-90">
           &rarr;
         </div>
 
-        <div className="rounded-2xl border border-teal/30 bg-gradient-to-br from-teal-soft to-paper-bright p-6 animate-[rise_500ms_ease_both]">
-          <span className="mb-3 block text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft">
-            What Human Mode says
+        <div className="rounded-2xl border border-teal/30 bg-gradient-to-br from-teal-soft to-paper-bright p-5 animate-[rise_500ms_ease_both]">
+          <span className="mb-2 block text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft">
+            Human Mode
           </span>
-          <p className="text-[1.05rem]/relaxed font-medium text-ink">
-            Step 1: Show that you earn enough to support your family member. You
-            will need your most recent tax return and a letter from your
-            employer. Here is how to fill it out, one field at a time.
+          <p className="text-base/relaxed font-medium text-ink">
+            Show that you earn enough to support your family member.
+            You need your tax return and an employer letter.
           </p>
         </div>
       </section>
@@ -192,23 +189,23 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
       {/* ---- What you get ---- */}
       <section className="mb-14">
-        <h2 className="mb-5 text-xl font-bold text-ink">What you will get back</h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <h2 className="mb-5 text-xl font-bold text-ink">What you get back</h2>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {[
-            { icon: "\u270E", title: "Plain-language overview", desc: "What this page is actually asking for, in one calm paragraph." },
-            { icon: "\u2713", title: "Before-you-start checklist", desc: "Documents, IDs, and info to gather before you touch the form." },
-            { icon: "\u26A0", title: "Confusing parts flagged", desc: "The fields and jargon most people get wrong, explained simply." },
-            { icon: "\u25B6", title: "Spoken voice brief", desc: "A 2-minute audio walkthrough you can send to anyone. Just press play." },
+            { num: "1", title: "Plain-language overview", desc: "What this page actually asks for, in one calm paragraph." },
+            { num: "2", title: "Before-you-start checklist", desc: "Documents and info to gather before you touch the form." },
+            { num: "3", title: "Confusing parts flagged", desc: "Jargon most people get wrong, explained simply." },
+            { num: "4", title: "Spoken voice brief", desc: "A short audio walkthrough. Send it to anyone — just press play." },
           ].map((item) => (
             <div
               key={item.title}
-              className="rounded-2xl border border-line bg-paper-bright/70 p-5"
+              className="rounded-2xl border border-line bg-paper-bright/70 p-4"
             >
-              <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-base">
-                {item.icon}
+              <span className="mb-2 flex h-8 w-8 items-center justify-center rounded-lg bg-teal/15 text-sm font-bold text-teal">
+                {item.num}
               </span>
-              <h3 className="mb-1 font-bold text-ink">{item.title}</h3>
-              <p className="text-sm/relaxed text-ink-soft">{item.desc}</p>
+              <h3 className="mb-1 text-sm font-bold text-ink">{item.title}</h3>
+              <p className="text-xs/relaxed text-ink-soft">{item.desc}</p>
             </div>
           ))}
         </div>
@@ -222,7 +219,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         <h2 className="mb-5 text-xl font-bold text-ink">
           Pages that make people call their kids for help.
         </h2>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           {loaderData.demoSites.map((site) => (
             <button
               key={site.id}

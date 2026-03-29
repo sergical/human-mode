@@ -108,6 +108,9 @@ export default function Session({ loaderData }: Route.ComponentProps) {
         {/* Voice Brief */}
         {loaderData.voiceReady && (
           <section className="mb-10 rounded-2xl border border-teal/25 bg-gradient-to-br from-teal-soft to-paper-bright p-5">
+            <p className="mb-3 text-xs font-bold uppercase tracking-widest text-ink-soft">
+              Voice brief
+            </p>
             <AudioPlayerProvider>
               <div className="flex items-center gap-3">
                 <AudioPlayerButton
@@ -122,9 +125,6 @@ export default function Session({ loaderData }: Route.ComponentProps) {
                 <AudioPlayerDuration className="text-xs text-ink-soft tabular-nums" />
               </div>
             </AudioPlayerProvider>
-            <p className="mt-3 text-xs text-ink-soft">
-              Listen to a spoken version of this guide
-            </p>
           </section>
         )}
 
@@ -176,7 +176,7 @@ export default function Session({ loaderData }: Route.ComponentProps) {
         {/* Follow-up Q&A */}
         <section className="mb-8">
           <h2 className="mb-4 text-base font-bold text-ink">
-            Still confused? Ask a question.
+            Have a question about this page?
           </h2>
 
           {guide.suggestedQuestions.length > 0 && (
@@ -288,7 +288,7 @@ function QuestionForm({
           <button
             type="button"
             onClick={listening ? stopListening : startListening}
-            className={`flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-all ${
+            className={`flex h-10 shrink-0 cursor-pointer items-center justify-center gap-1.5 rounded-full border px-3 transition-all ${
               listening
                 ? "border-accent bg-accent/10 text-accent animate-pulse"
                 : "border-line bg-white/80 text-ink-soft hover:-translate-y-px hover:border-accent/40"
@@ -306,6 +306,9 @@ function QuestionForm({
                 <line x1="12" x2="12" y1="19" y2="22" />
               </svg>
             )}
+            <span className="hidden text-xs sm:inline">
+              {listening ? "Stop" : "Speak"}
+            </span>
           </button>
         )}
         <button
