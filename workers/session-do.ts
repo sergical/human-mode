@@ -1,9 +1,10 @@
 import type {
+  AnalysisResult,
   FollowUpItem,
   HumanModeSessionInit,
   HumanModeSessionState,
 } from "../shared/human-mode";
-import { analyzePageForHumanMode, answerQuestionForHumanMode } from "./analyze";
+import { analyzePageForHumanMode } from "./analyze";
 
 const STORAGE_KEY = "session";
 
@@ -22,6 +23,10 @@ export class HumanModeSession {
 
     if (request.method === "POST" && url.pathname === "/initialize") {
       return this.handleInitialize(request);
+    }
+
+    if (request.method === "POST" && url.pathname === "/store-analysis") {
+      return this.handleStoreAnalysis(request);
     }
 
     if (request.method === "POST" && url.pathname === "/follow-ups") {
@@ -50,6 +55,7 @@ export class HumanModeSession {
       id: sessionId,
       createdAt: now,
       updatedAt: now,
+      url: init.url,
       locale: init.locale,
       profileId: init.profileId,
       status: "analyzing",
@@ -61,40 +67,78 @@ export class HumanModeSession {
 
     await this.writeSession(draft);
 
-    try {
-      const analysis = await analyzePageForHumanMode(init, this.env);
+    // Run analysis in the background — return immediately so the user gets redirected fast
+    if (this.env.AI) {
+      this.state.waitUntil(
+        analyzePageForHumanMode(init, this.env)
+          .then(async (analysis) => {
+            const ready: HumanModeSessionState = {
+              ...draft,
+              updatedAt: new Date().toISOString(),
+              status: "ready",
+              page: analysis.page,
+              guide: analysis.guide,
+              guideSource: analysis.guideSource,
+              error: analysis.aiError ?? null,
+            };
+            await this.writeSession(ready);
+          })
+          .catch(async (error) => {
+            const failed: HumanModeSessionState = {
+              ...draft,
+              updatedAt: new Date().toISOString(),
+              status: "error",
+              error: error instanceof Error ? error.message : "Analysis failed.",
+            };
+            await this.writeSession(failed);
+          })
+      );
+    }
+
+    // Return draft immediately — session page auto-refreshes until ready
+    return Response.json(draft);
+  }
+
+  private async handleStoreAnalysis(request: Request): Promise<Response> {
+    const session = await this.readSession();
+    if (!session) {
+      return Response.json({ error: "Session not found." }, { status: 404 });
+    }
+
+    const body = (await request.json()) as
+      | { ok: true; analysis: AnalysisResult }
+      | { ok: false; error: string };
+
+    if (body.ok) {
       const ready: HumanModeSessionState = {
-        ...draft,
+        ...session,
         updatedAt: new Date().toISOString(),
         status: "ready",
-        page: analysis.page,
-        guide: analysis.guide,
+        page: body.analysis.page,
+        guide: body.analysis.guide,
+        guideSource: body.analysis.guideSource,
       };
-
       await this.writeSession(ready);
       return Response.json(ready);
-    } catch (error) {
-      const failed: HumanModeSessionState = {
-        ...draft,
-        updatedAt: new Date().toISOString(),
-        status: "error",
-        error:
-          error instanceof Error
-            ? error.message
-            : "Human Mode could not analyze this page.",
-      };
-
-      await this.writeSession(failed);
-      return Response.json(failed, { status: 500 });
     }
+
+    const failed: HumanModeSessionState = {
+      ...session,
+      updatedAt: new Date().toISOString(),
+      status: "error",
+      error: body.error,
+    };
+    await this.writeSession(failed);
+    return Response.json(failed, { status: 500 });
   }
 
   private async handleFollowUp(request: Request): Promise<Response> {
-    const body = (await request.json()) as { question?: string };
+    const body = (await request.json()) as { question?: string; answer?: string };
     const question = body.question?.trim();
+    const answer = body.answer?.trim();
 
-    if (!question) {
-      return Response.json({ error: "Question is required." }, { status: 400 });
+    if (!question || !answer) {
+      return Response.json({ error: "Question and answer are required." }, { status: 400 });
     }
 
     const session = await this.readSession();
@@ -102,7 +146,6 @@ export class HumanModeSession {
       return Response.json({ error: "Session not found." }, { status: 404 });
     }
 
-    const answer = await answerQuestionForHumanMode(session, question, this.env);
     const followUp: FollowUpItem = {
       id: crypto.randomUUID(),
       question,

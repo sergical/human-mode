@@ -17,11 +17,13 @@ export async function analyzePageForHumanMode(
   env: Env
 ): Promise<AnalysisResult> {
   const page = await capturePageContext(init.url, env);
-  const aiGuide = await generateGuideWithWorkersAi(page, init, env);
+  const aiResult = await generateGuideWithWorkersAi(page, init, env);
 
   return {
     page,
-    guide: aiGuide ?? buildFallbackGuide(page, init.profileId),
+    guide: aiResult.guide ?? buildFallbackGuide(page, init.profileId),
+    guideSource: aiResult.guide ? "ai" : "fallback",
+    aiError: aiResult.error,
   };
 }
 
@@ -38,35 +40,46 @@ export async function answerQuestionForHumanMode(
   return buildFallbackAnswer(session, question);
 }
 
+interface AiGuideResult {
+  guide: HumanModeGuide | null;
+  error?: string;
+}
+
 async function generateGuideWithWorkersAi(
   page: PageSnapshot,
   init: HumanModeSessionInit,
   env: Env
-): Promise<HumanModeGuide | null> {
+): Promise<AiGuideResult> {
   if (!env.AI) {
-    return null;
+    return { guide: null, error: "env.AI not available" };
   }
 
   const profile = audienceProfiles[init.profileId];
   const model = (env.HUMAN_MODE_MODEL ?? DEFAULT_AI_MODEL) as keyof AiModels;
-  const prompt = [
+
+  const systemPrompt = [
     "You are Human Mode, a plain-language guide for hard webpages.",
-    `Audience: ${profile.label}.`,
-    `Tone: ${profile.tone}.`,
-    `Reading level: ${profile.readingLevel}.`,
+    `Audience: ${profile.label}. Tone: ${profile.tone}. Reading level: ${profile.readingLevel}.`,
     `Preferred output language locale: ${init.locale}.`,
-    "Return valid JSON only with this exact shape:",
-    '{"overview":"string","beforeYouStart":["string"],"whatMightBeConfusing":[{"label":"string","explanation":"string"}],"nextSteps":["string"],"suggestedQuestions":["string"],"voiceScript":"string"}',
-    "Keep the response grounded in the page details below. Do not invent forms, prices, or steps that are not hinted at by the page.",
+    "Return ONLY valid JSON with this shape (no markdown, no explanation):",
+    '{"overview":"1-2 sentences","beforeYouStart":["item1","item2"],"whatMightBeConfusing":[{"label":"short","explanation":"1 sentence"}],"nextSteps":["step1","step2"],"suggestedQuestions":["q1","q2"],"voiceScript":"2-3 spoken sentences"}',
+    "Keep each field brief. Max 3 items per array. Stay grounded in the page details. Do not invent.",
+  ].join("\n");
+
+  const userPrompt = [
     `Page title: ${page.title}`,
-    `Page summary: ${page.summary}`,
-    `Headings: ${page.headings.join(" | ") || "None detected"}`,
-    `Excerpt: ${page.excerpt || "No excerpt captured."}`,
+    `Summary: ${page.summary}`,
+    `Headings: ${page.headings.join(" | ") || "None"}`,
+    `Excerpt: ${page.excerpt?.slice(0, 600) || "No excerpt."}`,
   ].join("\n");
 
   try {
     const answer = (await env.AI.run(model, {
-      prompt,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: 1024,
     })) as unknown;
     const raw =
       typeof answer === "string"
@@ -75,10 +88,15 @@ async function generateGuideWithWorkersAi(
           ? String((answer as { response?: unknown }).response ?? "")
           : JSON.stringify(answer);
 
-    return parseGuideFromModel(raw);
+    const parsed = parseGuideFromModel(raw);
+    if (!parsed) {
+      return { guide: null, error: `JSON parse failed. Raw: ${raw.slice(0, 200)}` };
+    }
+    return { guide: parsed };
   } catch (error) {
-    console.warn("Workers AI guide generation failed, using fallback.", error);
-    return null;
+    const msg = error instanceof Error ? error.message : String(error);
+    console.warn("Workers AI guide generation failed:", msg);
+    return { guide: null, error: msg };
   }
 }
 
@@ -92,11 +110,8 @@ async function generateFollowUpWithWorkersAi(
   }
 
   const model = (env.HUMAN_MODE_MODEL ?? DEFAULT_AI_MODEL) as keyof AiModels;
-  const prompt = [
-    "You are Human Mode answering a follow-up question about a webpage.",
-    "Use only the session context below.",
-    "Answer in 2-4 short sentences. Prefer clarity over completeness.",
-    `Question: ${question}`,
+
+  const context = [
     `Page title: ${session.page.title}`,
     `Overview: ${session.guide.overview}`,
     `Before you start: ${session.guide.beforeYouStart.join(" | ")}`,
@@ -108,7 +123,15 @@ async function generateFollowUpWithWorkersAi(
 
   try {
     const answer = (await env.AI.run(model, {
-      prompt,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are Human Mode answering a follow-up question about a webpage. Use only the session context. Answer in 2-4 short sentences. Prefer clarity over completeness.",
+        },
+        { role: "user", content: `Context:\n${context}\n\nQuestion: ${question}` },
+      ],
+      max_tokens: 512,
     })) as unknown;
 
     const raw =
@@ -340,6 +363,37 @@ function identifyScenario(page: PageSnapshot): {
           label: "Eligibility window",
           explanation:
             "Healthcare sites often separate browsing from enrollment. Watch for whether the page is describing plan options or an actual signup period.",
+        },
+      ],
+    };
+  }
+
+  if (
+    source.includes("medication") ||
+    source.includes("drug") ||
+    source.includes("dosage") ||
+    source.includes("side effect") ||
+    source.includes("prescription") ||
+    source.includes("dailymed") ||
+    source.includes("medlineplus") ||
+    source.includes("interaction")
+  ) {
+    return {
+      name: "medication or drug information",
+      documents: [
+        "have the medication name, dosage, and your list of current medications ready",
+        "write down any allergies or conditions your doctor has mentioned",
+      ],
+      confusingPoints: [
+        {
+          label: "Active ingredient vs brand name",
+          explanation:
+            "The same drug can have many names. The active ingredient is the one that matters for interactions and allergies.",
+        },
+        {
+          label: "Common vs serious side effects",
+          explanation:
+            "Drug labels list every reported side effect. The common ones are usually mild. Focus on the serious ones and when to call a doctor.",
         },
       ],
     };

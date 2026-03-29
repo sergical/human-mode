@@ -33,8 +33,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
-        <div className="background-orbit background-orbit-left" />
-        <div className="background-orbit background-orbit-right" />
+        <div className="bg-orbit-l" />
+        <div className="bg-orbit-r" />
         {children}
         <ScrollRestoration />
         <Scripts />

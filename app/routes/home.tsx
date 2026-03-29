@@ -8,25 +8,21 @@ import {
   localeOptions,
   type AudienceProfileId,
 } from "../../shared/human-mode";
-import { initializeSession } from "../lib/session.server";
+import { initializeSession, runAnalysis } from "../lib/session.server";
 
 export function meta({}: Route.MetaArgs) {
   return [
-    { title: "Human Mode" },
+    { title: "Human Mode — Turn confusing websites into calm, spoken guides" },
     {
       name: "description",
       content:
-        "Turn hard public websites into calmer, plain-language step-by-step guides with Cloudflare and ElevenLabs.",
+        "Paste any government, healthcare, or immigration page. Get a calm, plain-language guide with a spoken brief — in the language your family understands.",
     },
   ];
 }
 
 export function loader() {
-  return {
-    demoSites,
-    localeOptions,
-    profiles: audienceProfileList,
-  };
+  return { demoSites, localeOptions, profiles: audienceProfileList };
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -36,16 +32,27 @@ export async function action({ request, context }: Route.ActionArgs) {
   const locale = String(formData.get("locale") || "en");
 
   if (!rawUrl) {
-    return { error: "Paste a public URL to build the first Human Mode guide." };
+    return { error: "Paste a public URL to get started." };
   }
 
   try {
     const normalizedUrl = new URL(rawUrl).toString();
-    const sessionId = await initializeSession(context.cloudflare.env, {
+    const init = {
       locale,
       profileId: profileId as AudienceProfileId,
       url: normalizedUrl,
-    });
+    };
+    const { sessionId, status } = await initializeSession(
+      context.cloudflare.env,
+      init
+    );
+
+    // Only run background analysis if DO didn't handle it (local dev without env.AI)
+    if (status === "analyzing") {
+      context.cloudflare.ctx.waitUntil(
+        runAnalysis(context.cloudflare.env, sessionId, init)
+      );
+    }
 
     return redirect(`/sessions/${sessionId}`);
   } catch (error) {
@@ -58,167 +65,196 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 }
 
-export default function Home({
-  loaderData,
-}: Route.ComponentProps) {
+export default function Home({ loaderData }: Route.ComponentProps) {
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
-  const [url, setUrl] = useState(loaderData.demoSites[0]?.url ?? "");
-  const [profileId, setProfileId] = useState<AudienceProfileId>(
-    loaderData.demoSites[0]?.recommendedProfileId ?? "older_parent"
-  );
-  const [locale, setLocale] = useState(loaderData.demoSites[0]?.locale ?? "en");
-
+  const [url, setUrl] = useState("");
+  const [profileId, setProfileId] = useState<AudienceProfileId>("older_parent");
+  const [locale, setLocale] = useState("en");
   const isSubmitting = navigation.state === "submitting";
 
   return (
-    <main className="page-shell">
-      <section className="hero-grid">
-        <div className="hero-column">
-          <p className="eyebrow">Hackathon Concept</p>
-          <h1 className="display-title">
-            Give someone you love a calmer way through hard websites.
-          </h1>
-          <p className="supporting-copy hero-copy">
-            Human Mode takes a public page, explains what it is actually asking
-            for, highlights the easy-to-miss parts, and turns the result into a
-            spoken brief when ElevenLabs is configured.
+    <main className="mx-auto w-full max-w-5xl px-5 py-12 sm:px-8">
+      {/* ---- Hero ---- */}
+      <section className="mx-auto mb-14 max-w-2xl text-center">
+        <h1 className="font-display text-[clamp(2.6rem,7vw,5.2rem)] leading-[0.92] tracking-tight text-ink">
+          Government websites weren't designed for&nbsp;humans.
+        </h1>
+        <p className="mx-auto mt-5 max-w-lg text-lg/relaxed text-ink-soft">
+          Paste any confusing page. Get a calm, spoken guide — in the language
+          your family&nbsp;understands.
+        </p>
+      </section>
+
+      {/* ---- Before / After ---- */}
+      <section className="mb-14 grid grid-cols-1 items-stretch gap-5 md:grid-cols-[1fr_auto_1fr]">
+        <div className="rounded-2xl border border-dashed border-ink/15 bg-ink/[0.04] p-6 animate-[rise_500ms_ease_both]">
+          <span className="mb-3 block text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft">
+            What the website says
+          </span>
+          <p className="text-sm/relaxed italic text-ink-soft">
+            Submit Form I-864, Affidavit of Support Under Section 213A of the
+            INA, to establish that an intending immigrant has adequate means of
+            financial support and is not likely to become a public charge
+            pursuant to &sect;602(d)(2) of the Immigration Act of 1990.
           </p>
-          <div className="badge-row">
-            <span className="badge-pill">Cloudflare Worker</span>
-            <span className="badge-pill">Durable session memory</span>
-            <span className="badge-pill">Optional ElevenLabs brief</span>
-          </div>
         </div>
 
-        <Form method="post" className="card launch-card">
-          <div className="card-header">
-            <p className="eyebrow">Start A Guide</p>
-            <p className="card-lead">
-              Pick a real public page and the person you are helping.
-            </p>
-          </div>
+        <div className="flex items-center justify-center text-3xl font-light text-teal max-md:rotate-90">
+          &rarr;
+        </div>
 
-          <label className="field-group">
-            <span className="field-label">Website URL</span>
+        <div className="rounded-2xl border border-teal/30 bg-gradient-to-br from-teal-soft to-paper-bright p-6 animate-[rise_500ms_ease_both]">
+          <span className="mb-3 block text-[0.7rem] font-bold uppercase tracking-[0.18em] text-ink-soft">
+            What Human Mode says
+          </span>
+          <p className="text-[1.05rem]/relaxed font-medium text-ink">
+            Step 1: Show that you earn enough to support your family member. You
+            will need your most recent tax return and a letter from your
+            employer. Here is how to fill it out, one field at a time.
+          </p>
+        </div>
+      </section>
+
+      {/* ---- Form ---- */}
+      <section className="mx-auto mb-14 max-w-2xl" id="try">
+        <Form
+          method="post"
+          className="flex flex-col gap-5 rounded-3xl border border-line bg-paper-bright/80 p-6 shadow-xl shadow-ink/8 backdrop-blur-lg animate-[rise_500ms_ease_both]"
+        >
+          <label className="flex flex-col gap-2">
+            <span className="text-sm font-bold text-ink">Paste a confusing URL</span>
             <input
-              className="text-field"
+              className="w-full rounded-2xl border border-ink/15 bg-white/90 px-4 py-3.5 text-ink placeholder:text-ink-soft/50 transition-all focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent-soft focus:-translate-y-px"
               type="url"
               name="url"
-              onChange={(event) => setUrl(event.target.value)}
-              placeholder="https://travel.state.gov/..."
+              onChange={(e) => setUrl(e.target.value)}
+              placeholder="https://www.canada.ca/en/immigration..."
               required
               value={url}
             />
           </label>
 
-          <div className="field-group">
-            <span className="field-label">Who is this for?</span>
-            <div className="choice-grid">
-              {loaderData.profiles.map((profile) => (
-                <button
-                  key={profile.id}
-                  className={
-                    profile.id === profileId
-                      ? "choice-card choice-card-active"
-                      : "choice-card"
-                  }
-                  onClick={() => setProfileId(profile.id)}
-                  type="button"
-                >
-                  <span className="choice-title">{profile.label}</span>
-                  <span className="choice-caption">{profile.caption}</span>
-                </button>
-              ))}
+          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[1fr_auto]">
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-bold text-ink">Who is this for?</span>
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                {loaderData.profiles.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setProfileId(p.id)}
+                    className={`flex flex-col items-start gap-1 rounded-2xl border p-3 text-left transition-all hover:-translate-y-px sm:min-h-32 ${
+                      p.id === profileId
+                        ? "border-accent/40 bg-gradient-to-b from-accent-soft to-white/90 shadow-sm"
+                        : "border-line bg-white/60 hover:border-ink/20"
+                    }`}
+                  >
+                    <span className="font-bold text-ink">{p.label}</span>
+                    <span className="text-sm/snug text-ink-soft">{p.caption}</span>
+                  </button>
+                ))}
+              </div>
+              <input type="hidden" name="profileId" value={profileId} />
             </div>
-            <input type="hidden" name="profileId" value={profileId} />
+
+            <label className="flex min-w-36 flex-col gap-2">
+              <span className="text-sm font-bold text-ink">Language</span>
+              <select
+                className="w-full rounded-2xl border border-ink/15 bg-white/90 px-4 py-3.5 text-ink transition-all focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent-soft"
+                name="locale"
+                onChange={(e) => setLocale(e.target.value)}
+                value={locale}
+              >
+                {loaderData.localeOptions.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </label>
           </div>
 
-          <label className="field-group">
-            <span className="field-label">Guide language</span>
-            <select
-              className="select-field"
-              name="locale"
-              onChange={(event) => setLocale(event.target.value)}
-              value={locale}
-            >
-              {loaderData.localeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
+          {actionData?.error && (
+            <p className="text-sm font-medium text-red-700">{actionData.error}</p>
+          )}
 
-          {actionData?.error ? (
-            <p className="form-error">{actionData.error}</p>
-          ) : null}
-
-          <button className="primary-button" disabled={isSubmitting} type="submit">
-            {isSubmitting ? "Building your guide..." : "Launch Human Mode"}
+          <button
+            className="cursor-pointer rounded-full bg-gradient-to-br from-ink to-ink-soft px-6 py-4 text-base font-bold text-white shadow-lg shadow-ink/15 transition-all hover:-translate-y-px hover:shadow-xl disabled:cursor-wait disabled:opacity-60"
+            disabled={isSubmitting}
+            type="submit"
+          >
+            {isSubmitting ? "Reading the page..." : "Make it human"}
           </button>
+
+          <p className="text-center text-xs text-ink-soft">
+            No signup. No tracking. Works on any public page.
+          </p>
         </Form>
       </section>
 
-      <section className="section-block">
-        <div className="section-heading">
-          <p className="eyebrow">Suggested Demo Pages</p>
-          <h2 className="section-title">Use public sites that already feel high-friction.</h2>
+      {/* ---- What you get ---- */}
+      <section className="mb-14">
+        <h2 className="mb-5 text-xl font-bold text-ink">What you will get back</h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {[
+            { icon: "\u270E", title: "Plain-language overview", desc: "What this page is actually asking for, in one calm paragraph." },
+            { icon: "\u2713", title: "Before-you-start checklist", desc: "Documents, IDs, and info to gather before you touch the form." },
+            { icon: "\u26A0", title: "Confusing parts flagged", desc: "The fields and jargon most people get wrong, explained simply." },
+            { icon: "\u25B6", title: "Spoken voice brief", desc: "A 2-minute audio walkthrough you can send to anyone. Just press play." },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="rounded-2xl border border-line bg-paper-bright/70 p-5"
+            >
+              <span className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-accent-soft text-base">
+                {item.icon}
+              </span>
+              <h3 className="mb-1 font-bold text-ink">{item.title}</h3>
+              <p className="text-sm/relaxed text-ink-soft">{item.desc}</p>
+            </div>
+          ))}
         </div>
+      </section>
 
-        <div className="demo-grid">
+      {/* ---- Demo sites ---- */}
+      <section className="mb-14">
+        <p className="mb-1 text-[0.7rem] font-bold uppercase tracking-[0.16em] text-ink-soft">
+          Try a real page
+        </p>
+        <h2 className="mb-5 text-xl font-bold text-ink">
+          Pages that make people call their kids for help.
+        </h2>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {loaderData.demoSites.map((site) => (
             <button
               key={site.id}
-              className="card demo-card"
+              type="button"
               onClick={() => {
                 setUrl(site.url);
                 setProfileId(site.recommendedProfileId);
                 setLocale(site.locale);
+                document.getElementById("try")?.scrollIntoView({ behavior: "smooth" });
               }}
-              type="button"
+              className="group flex cursor-pointer flex-col gap-3 rounded-2xl border border-line bg-paper-bright/80 p-5 text-left shadow-md shadow-ink/5 backdrop-blur-md transition-all hover:-translate-y-1 hover:shadow-lg hover:border-ink/20 animate-[rise_500ms_ease_both]"
             >
-              <div className="demo-meta">
-                <span className="demo-category">{site.category}</span>
-                <span className="demo-cta">Use this site</span>
-              </div>
-              <h3 className="demo-title">{site.title}</h3>
-              <p className="demo-url">{site.url}</p>
-              <p className="demo-reason">{site.reason}</p>
+              <span className="w-fit rounded-full border border-line bg-white/80 px-3 py-1 text-xs font-medium text-ink-soft transition-colors group-hover:border-accent/30 group-hover:text-ink">
+                {site.category}
+              </span>
+              <h3 className="text-lg font-bold leading-tight text-ink">{site.title}</h3>
+              <p className="text-sm/relaxed text-ink-soft">{site.reason}</p>
             </button>
           ))}
         </div>
       </section>
 
-      <section className="section-block story-grid">
-        <div className="card card-padded story-card">
-          <p className="eyebrow">Why It Feels New</p>
-          <h3 className="story-title">It is not another agent.</h3>
-          <p className="supporting-copy">
-            The interface is built around comprehension, not prompting. The app
-            answers, "What is this page asking for and how do I safely continue?"
-          </p>
-        </div>
-
-        <div className="card card-padded story-card">
-          <p className="eyebrow">Why It Feels Useful</p>
-          <h3 className="story-title">Real pages. Real pressure.</h3>
-          <p className="supporting-copy">
-            Passport renewals, benefits, healthcare, and immigration pages all
-            create stakes before a user ever logs in or pays.
-          </p>
-        </div>
-
-        <div className="card card-padded story-card">
-          <p className="eyebrow">Why It Feels Social</p>
-          <h3 className="story-title">A product you can film in 10 seconds.</h3>
-          <p className="supporting-copy">
-            Show the impossible page first. Then show Human Mode translate it
-            into one clear action and a spoken brief for the person you are
-            helping.
-          </p>
-        </div>
-      </section>
+      {/* ---- Footer ---- */}
+      <footer className="mt-16 border-t border-line pt-10 text-center">
+        <p className="font-display text-2xl text-ink">
+          Built for the people who help the&nbsp;people.
+        </p>
+        <p className="mt-2 text-sm text-ink-soft">
+          Powered by Cloudflare Workers AI and ElevenLabs. Free and open source.
+        </p>
+      </footer>
     </main>
   );
 }

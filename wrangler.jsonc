@@ -6,6 +6,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "human-mode",
+  "account_id": "a6221d3398c2e695ab8e1a2f1237bd1b",
   "compatibility_date": "2026-03-28",
   "compatibility_flags": ["nodejs_compat"],
   "main": "./workers/app.ts",
@@ -27,7 +28,8 @@
     "binding": "BROWSER_RENDERING"
   },
   "ai": {
-    "binding": "AI"
+    "binding": "AI",
+    "remote": true
   },
   "observability": {
     "enabled": true,
