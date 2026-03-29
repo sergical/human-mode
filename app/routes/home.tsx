@@ -135,33 +135,37 @@ export default function Home({ loaderData }: Route.ComponentProps) {
             />
           </label>
 
-          <div className="grid grid-cols-1 items-start gap-4 sm:grid-cols-[1fr_auto]">
-            <div className="flex flex-col gap-2">
-              <span className="text-sm font-bold text-ink">Who is this for?</span>
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
-                {loaderData.profiles.map((p) => (
-                  <button
-                    key={p.id}
-                    type="button"
-                    onClick={() => setProfileId(p.id)}
-                    className={`flex flex-col items-start gap-1 rounded-2xl border p-3 text-left transition-all hover:-translate-y-px sm:min-h-32 ${
-                      p.id === profileId
-                        ? "border-accent/40 bg-gradient-to-b from-accent-soft to-white/90 shadow-sm"
-                        : "border-line bg-white/60 hover:border-ink/20"
-                    }`}
-                  >
-                    <span className="font-bold text-ink">{p.label}</span>
-                    <span className="text-sm/snug text-ink-soft">{p.caption}</span>
-                  </button>
-                ))}
-              </div>
-              <input type="hidden" name="profileId" value={profileId} />
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-bold text-ink">Who is this for?</span>
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {loaderData.profiles.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setProfileId(p.id)}
+                  className={`flex flex-col items-start gap-1 rounded-xl border p-3 text-left transition-all hover:-translate-y-px ${
+                    p.id === profileId
+                      ? "border-accent/40 bg-gradient-to-b from-accent-soft to-white/90 shadow-sm"
+                      : "border-line bg-white/60 hover:border-ink/20"
+                  }`}
+                >
+                  <span className="text-sm font-bold text-ink">{p.label}</span>
+                  <span className="text-xs/snug text-ink-soft">{p.caption}</span>
+                </button>
+              ))}
             </div>
+            <input type="hidden" name="profileId" value={profileId} />
+          </div>
 
-            <label className="flex min-w-36 flex-col gap-2">
+          {actionData?.error && (
+            <p className="text-sm font-medium text-red-700">{actionData.error}</p>
+          )}
+
+          <div className="flex items-center gap-3">
+            <label className="flex items-center gap-2">
               <span className="text-sm font-bold text-ink">Language</span>
               <select
-                className="w-full rounded-2xl border border-ink/15 bg-white/90 px-4 py-3.5 text-ink transition-all focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent-soft"
+                className="rounded-full border border-ink/15 bg-white/90 px-4 py-2.5 text-sm text-ink transition-all focus:border-accent/60 focus:outline-none focus:ring-4 focus:ring-accent-soft"
                 name="locale"
                 onChange={(e) => setLocale(e.target.value)}
                 value={locale}
@@ -171,19 +175,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
                 ))}
               </select>
             </label>
+            <button
+              className="flex-1 cursor-pointer rounded-full bg-gradient-to-br from-ink to-ink-soft px-6 py-3 text-base font-bold text-white shadow-lg shadow-ink/15 transition-all hover:-translate-y-px hover:shadow-xl disabled:cursor-wait disabled:opacity-60"
+              disabled={isSubmitting}
+              type="submit"
+            >
+              {isSubmitting ? "Reading the page..." : "Make it human"}
+            </button>
           </div>
-
-          {actionData?.error && (
-            <p className="text-sm font-medium text-red-700">{actionData.error}</p>
-          )}
-
-          <button
-            className="cursor-pointer rounded-full bg-gradient-to-br from-ink to-ink-soft px-6 py-4 text-base font-bold text-white shadow-lg shadow-ink/15 transition-all hover:-translate-y-px hover:shadow-xl disabled:cursor-wait disabled:opacity-60"
-            disabled={isSubmitting}
-            type="submit"
-          >
-            {isSubmitting ? "Reading the page..." : "Make it human"}
-          </button>
 
           <p className="text-center text-xs text-ink-soft">
             No signup. No tracking. Works on any public page.
