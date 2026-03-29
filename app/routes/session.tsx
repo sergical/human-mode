@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Form, Link, useNavigation, useRevalidator } from "react-router";
 
 import type { Route } from "./+types/session";
-import { audienceProfiles } from "../../shared/human-mode";
 import { addFollowUp, fetchSession } from "../lib/session.server";
 import {
   AudioPlayerProvider,
@@ -55,7 +54,7 @@ export default function Session({ loaderData }: Route.ComponentProps) {
   const navigation = useNavigation();
   const session = loaderData.session;
   const guide = session.guide;
-  const profile = audienceProfiles[session.profileId];
+  // Profile removed — universal plain language mode
   const isSubmitting =
     navigation.state === "submitting" &&
     navigation.formData?.get("_intent") === "follow-up";
@@ -101,7 +100,7 @@ export default function Session({ loaderData }: Route.ComponentProps) {
           </h1>
           <p className="mt-3 text-sm text-ink-soft">
             From {new URL(session.page.url).hostname} &middot;{" "}
-            {profile.label} mode
+            plain language mode
           </p>
         </header>
 

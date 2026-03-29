@@ -1,17 +1,3 @@
-export type AudienceProfileId =
-  | "older_parent"
-  | "esl_support"
-  | "healthcare_helper"
-  | "medication_helper";
-
-export interface AudienceProfile {
-  id: AudienceProfileId;
-  label: string;
-  caption: string;
-  readingLevel: string;
-  tone: string;
-}
-
 export interface LocaleOption {
   value: string;
   label: string;
@@ -23,7 +9,6 @@ export interface DemoSite {
   category: string;
   url: string;
   reason: string;
-  recommendedProfileId: AudienceProfileId;
   locale: string;
 }
 
@@ -60,7 +45,6 @@ export interface FollowUpItem {
 
 export interface HumanModeSessionInit {
   locale: string;
-  profileId: AudienceProfileId;
   url: string;
 }
 
@@ -70,7 +54,6 @@ export interface HumanModeSessionState {
   updatedAt: string;
   url: string;
   locale: string;
-  profileId: AudienceProfileId;
   status: "idle" | "analyzing" | "ready" | "error";
   page: PageSnapshot | null;
   guide: HumanModeGuide | null;
@@ -85,39 +68,6 @@ export interface AnalysisResult {
   guideSource: "ai" | "fallback";
   aiError?: string;
 }
-
-export const audienceProfiles: Record<AudienceProfileId, AudienceProfile> = {
-  older_parent: {
-    id: "older_parent",
-    label: "Older parent",
-    caption: "Calm, slowed-down guidance with fewer assumptions.",
-    readingLevel: "simple",
-    tone: "patient and reassuring",
-  },
-  esl_support: {
-    id: "esl_support",
-    label: "ESL support",
-    caption: "Plain words first, official terms explained only when needed.",
-    readingLevel: "plain",
-    tone: "clear and literal",
-  },
-  healthcare_helper: {
-    id: "healthcare_helper",
-    label: "Healthcare shopper",
-    caption: "Highlight costs, eligibility, documents, and risky choices.",
-    readingLevel: "plain but specific",
-    tone: "practical and detail-aware",
-  },
-  medication_helper: {
-    id: "medication_helper",
-    label: "Medication guide",
-    caption: "Break down side effects, interactions, dosage, and medical jargon.",
-    readingLevel: "plain and specific",
-    tone: "careful and reassuring",
-  },
-};
-
-export const audienceProfileList = Object.values(audienceProfiles);
 
 export const localeOptions: LocaleOption[] = [
   { value: "en", label: "English" },
@@ -134,7 +84,6 @@ export const demoSites: DemoSite[] = [
     category: "Travel paperwork",
     url: "https://travel.state.gov/content/travel/en/passports/have-passport/renew-online.html",
     reason: "Real requirements, warnings, and step ordering that trips up most people.",
-    recommendedProfileId: "older_parent",
     locale: "en",
   },
   {
@@ -143,7 +92,6 @@ export const demoSites: DemoSite[] = [
     category: "Government benefits",
     url: "https://www.usa.gov/benefit-finder",
     reason: "Branching eligibility language that hides real options behind jargon.",
-    recommendedProfileId: "esl_support",
     locale: "es",
   },
   {
@@ -152,7 +100,6 @@ export const demoSites: DemoSite[] = [
     category: "Immigration forms",
     url: "https://www.uscis.gov/feecalculator",
     reason: "Slows down fees, filing choices, and official terminology.",
-    recommendedProfileId: "esl_support",
     locale: "en",
   },
   {
@@ -161,7 +108,6 @@ export const demoSites: DemoSite[] = [
     category: "Healthcare",
     url: "https://www.healthcare.gov/see-plans/",
     reason: "Cost anxiety, plan jargon, and document preparation in one confusing page.",
-    recommendedProfileId: "healthcare_helper",
     locale: "en",
   },
   {
@@ -170,7 +116,6 @@ export const demoSites: DemoSite[] = [
     category: "Canadian taxes",
     url: "https://www.canada.ca/en/revenue-agency/services/child-family-benefits/canada-child-benefit-overview.html",
     reason: "Canada Child Benefit eligibility with shared custody rules and payment calculations.",
-    recommendedProfileId: "older_parent",
     locale: "en",
   },
   {
@@ -179,7 +124,6 @@ export const demoSites: DemoSite[] = [
     category: "Canadian immigration",
     url: "https://www.canada.ca/en/immigration-refugees-citizenship/services/immigrate-canada/express-entry.html",
     reason: "Multi-step immigration process with points system, eligibility streams, and deadlines.",
-    recommendedProfileId: "esl_support",
     locale: "uk",
   },
   {
@@ -188,11 +132,6 @@ export const demoSites: DemoSite[] = [
     category: "Medication info",
     url: "https://medlineplus.gov/druginfo/meds/a696005.html",
     reason: "Side effects, interactions, dosage, and medical jargon in dense clinical language.",
-    recommendedProfileId: "medication_helper",
     locale: "en",
   },
 ];
-
-export function getAudienceProfile(profileId: AudienceProfileId): AudienceProfile {
-  return audienceProfiles[profileId];
-}

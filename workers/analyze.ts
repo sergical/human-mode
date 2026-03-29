@@ -21,7 +21,7 @@ export async function analyzePageForHumanMode(
 
   return {
     page,
-    guide: aiResult.guide ?? buildFallbackGuide(page, init.profileId),
+    guide: aiResult.guide ?? buildFallbackGuide(page),
     guideSource: aiResult.guide ? "ai" : "fallback",
     aiError: aiResult.error,
   };
@@ -54,13 +54,12 @@ async function generateGuideWithWorkersAi(
     return { guide: null, error: "env.AI not available" };
   }
 
-  const profile = audienceProfiles[init.profileId];
   const model = (env.HUMAN_MODE_MODEL ?? DEFAULT_AI_MODEL) as keyof AiModels;
 
   const systemPrompt = [
-    "You are Human Mode, a plain-language guide for hard webpages.",
-    `Audience: ${profile.label}. Tone: ${profile.tone}. Reading level: ${profile.readingLevel}.`,
-    `Preferred output language locale: ${init.locale}.`,
+    "You are Human Mode. You turn confusing webpages into calm, plain-language guides.",
+    "Tone: patient, reassuring, specific. Reading level: simple — like explaining to a smart friend who has never seen this topic before.",
+    `Output language: ${init.locale}.`,
     "Return ONLY valid JSON with this shape (no markdown, no explanation):",
     '{"overview":"1-2 sentences","beforeYouStart":["item1","item2"],"whatMightBeConfusing":[{"label":"short","explanation":"1 sentence"}],"nextSteps":["step1","step2"],"suggestedQuestions":["q1","q2"],"voiceScript":"2-3 spoken sentences"}',
     "Keep each field brief. Max 3 items per array. Stay grounded in the page details. Do not invent.",
@@ -200,10 +199,8 @@ function extractJsonObject(raw: string): string | null {
 }
 
 function buildFallbackGuide(
-  page: PageSnapshot,
-  profileId: AudienceProfileId
+  page: PageSnapshot
 ): HumanModeGuide {
-  const profile = audienceProfiles[profileId];
   const scenario = identifyScenario(page);
   const headingSteps = page.headings.slice(0, 3).map((heading) => {
     return `Look for the section labeled "${heading}" and finish only that part before moving on.`;
@@ -230,13 +227,13 @@ function buildFallbackGuide(
   ]).slice(0, 4);
 
   const overview = [
-    `This page looks like a ${scenario.name.toLowerCase()} task.`,
-    `For ${profile.label.toLowerCase()} mode, I would slow it down, explain the official terms, and focus on one decision at a time.`,
+    `This page is about ${scenario.name.toLowerCase()}.`,
+    "Here is the calm version — one step at a time.",
     page.summary,
   ].join(" ");
 
   const voiceScript = [
-    `Here is the quick version for ${profile.label.toLowerCase()} mode.`,
+    "Here is the calm version of this page.",
     overview,
     `Before you start, ${beforeYouStart[0] ?? "gather the key documents this page asks for"}.`,
     `Watch out for ${whatMightBeConfusing[0]?.label.toLowerCase() ?? "official wording that hides the real choice"}.`,

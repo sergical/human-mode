@@ -57,7 +57,6 @@ export class HumanModeSession {
       updatedAt: now,
       url: init.url,
       locale: init.locale,
-      profileId: init.profileId,
       status: "analyzing",
       page: null,
       guide: null,
